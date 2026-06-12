@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>醫護三班制智慧排班系統 - 完美人員名單版</title>
+    <title>醫護三班制智慧排班系統 - 獨立1號在地儲存版</title>
     <style>
         /* 全域基礎優化 */
         * { box-sizing: border-box; }
@@ -21,6 +21,7 @@
         .smart-btn { background: linear-gradient(135deg, #2ed573, #1abc9c); color: white; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(46,213,115,0.2); text-align: center; transition: transform 0.1s; display: inline-block; }
         .smart-btn:active { transform: scale(0.98); }
         .pdf-btn { background: linear-gradient(135deg, #ff4757, #ff6b81); box-shadow: 0 4px 6px rgba(255,71,87,0.2); }
+        .clear-btn { background: linear-gradient(135deg, #747d8c, #2f3542); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .add-btn { background: linear-gradient(135deg, #1e90ff, #3742fa); box-shadow: 0 4px 6px rgba(30,144,255,0.2); margin-top: 10px; width: auto; }
         .del-btn { background: #ff4757; color: white; border: none; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         .del-btn:hover { background: #ff1f30; }
@@ -55,9 +56,8 @@
         .day-cell { background: #ffffff; border: 1px solid #ced4da; border-radius: 6px; padding: 6px; min-height: 175px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .day-cell.other-month { display: none; } 
         .day-cell.is-weekend { background: #fffdf0; border-color: #ffa502; }
-        .day-cell.first-day { border: 2px solid #1e90ff; background-color: #f0f7ff; }
+        .day-cell.first-day { border: 1px solid #ced4da; background-color: #ffffff; } /* 移除特殊外框與高亮 */
         .day-number { font-size: 14px; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .first-day-tip { font-size: 9px; color: #1e90ff; background: #e0f0ff; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
         
         .day-staff-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; border-bottom: 1px dashed #f1f2f6; padding-bottom: 2px; }
         .day-staff-name { font-weight: bold; width: 50px; overflow: hidden; text-overflow: ellipsis; }
@@ -119,7 +119,7 @@
 
 <div class="container">
     <h1>醫護/三班制智慧排班系統</h1>
-    <div class="subtitle">【全新人名更新版：內建動態增刪、手機優化、一鍵智慧平分假期與 A4 橫式 PDF 輸出】</div>
+    <div class="subtitle">【1號獨立客製版：已拔除1號連動覆蓋功能、支援網頁全自動儲存、增刪人員、橫式 PDF 輸出】</div>
 
     <div class="section-box">
         <div class="section-title-container">
@@ -127,6 +127,7 @@
             <div class="btn-group">
                 <button class="smart-btn" onclick="autoDistributeExcessLeavesWithSafety()">✨ 一鍵平均分假 (系統自動修正違規)</button>
                 <button class="smart-btn pdf-btn" onclick="exportToPDF()">🖨️ 輸出成標準 PDF 班表</button>
+                <button class="smart-btn clear-btn" onclick="clearAllSchedules()">🧹 清空全體班表重排</button>
             </div>
         </div>
         <div class="table-responsive">
@@ -170,16 +171,19 @@
 </div>
 
 <script>
-    // 更新為您提供的新名單
-    let staffList = [
-        { id: Date.now()+0, name: "桂玲", mainShift: "BC", leaveCur: "5,12", leaveNxt: "6,13" },
-        { id: Date.now()+1, name: "于鈞", mainShift: "BC", leaveCur: "4,11", leaveNxt: "5,12" },
-        { id: Date.now()+2, name: "宛倫", mainShift: "BC", leaveCur: "1,2", leaveNxt: "2,3" },
-        { id: Date.now()+3, name: "宜庭", mainShift: "JB", leaveCur: "6,13", leaveNxt: "7,14" },
-        { id: Date.now()+4, name: "季苓", mainShift: "JB", leaveCur: "3,10", leaveNxt: "4,11" },
-        { id: Date.now()+5, name: "詠湉", mainShift: "RA", leaveCur: "14,15", leaveNxt: "1,2" }
+    // 初始預設名單
+    const initialStaffList = [
+        { id: 1001, name: "桂玲", mainShift: "BC", leaveCur: "5,12", leaveNxt: "6,13" },
+        { id: 1002, name: "于鈞", mainShift: "BC", leaveCur: "4,11", leaveNxt: "5,12" },
+        { id: 1003, name: "宛倫", mainShift: "BC", leaveCur: "1,2", leaveNxt: "2,3" },
+        { id: 1004, name: "宜庭", mainShift: "JB", leaveCur: "6,13", leaveNxt: "7,14" },
+        { id: 1005, name: "季苓", mainShift: "JB", leaveCur: "3,10", leaveNxt: "4,11" },
+        { id: 1006, name: "詠湉", mainShift: "RA", leaveCur: "14,15", leaveNxt: "1,2" }
     ];
-    
+
+    let staffList = [];
+    let savedShifts = {}; 
+
     const mainShiftOptions = ["BC", "JB", "RA"];
     const shiftPermissions = {
         'BC': ['BC', 'JB', 'BC+2', 'BC+4', 'DB', 'OFF', '假'],
@@ -188,8 +192,6 @@
     };
     const shiftHours = { 'OFF': 0, '假': 0, 'BC': 8, 'JB': 8, 'RA': 8, 'BC+2': 10, 'BC+4': 12, 'DB': 8, 'RA+4': 12 };
     const nationalHolidays = ["2026-06-19"]; 
-
-    let savedShifts = {}; 
 
     const now = new Date(2026, 5, 1); 
     const curYear = now.getFullYear(); const curMonth = now.getMonth() + 1; 
@@ -209,7 +211,31 @@
     const nxtMonthTargetLeaves = countTargetRequiredLeaves(nxtYear, nxtMonth);
     const totalTargetRequired = curMonthTargetLeaves + nxtMonthTargetLeaves;
 
-    // 1. 核心渲染：渲染主控台人員列表
+    // 加載本地快取儲存資料
+    function loadSavedData() {
+        let localStaff = localStorage.getItem('nurse_staff_list');
+        let localShifts = localStorage.getItem('nurse_saved_shifts');
+        
+        if (localStaff) {
+            staffList = JSON.parse(localStaff);
+        } else {
+            staffList = JSON.parse(JSON.stringify(initialStaffList));
+        }
+        
+        if (localShifts) {
+            savedShifts = JSON.parse(localShifts);
+        } else {
+            savedShifts = {};
+        }
+    }
+
+    // 即時同步寫入 LocalStorage
+    function saveDataToStorage() {
+        localStorage.setItem('nurse_staff_list', JSON.stringify(staffList));
+        localStorage.setItem('nurse_saved_shifts', JSON.stringify(savedShifts));
+    }
+
+    // 渲染控制面板
     function renderStaffControlPanel() {
         const tbody = document.getElementById('staff-setting-body');
         tbody.innerHTML = '';
@@ -245,6 +271,7 @@
             staff.leaveNxt = document.getElementById(`leave_nxt_${id}`).value;
         }
         document.querySelectorAll(`.name-lbl-${id}`).forEach(el => el.innerText = staff.name);
+        saveDataToStorage();
     }
 
     function addNewStaff() {
@@ -252,6 +279,7 @@
         staffList.push({ id: newId, name: "新同仁", mainShift: "BC", leaveCur: "", leaveNxt: "" });
         renderStaffControlPanel();
         renderBothCalendars();
+        saveDataToStorage();
     }
 
     function deleteStaff(id) {
@@ -264,6 +292,7 @@
             staffList = staffList.filter(s => s.id !== id);
             renderStaffControlPanel();
             renderBothCalendars();
+            saveDataToStorage();
         }
     }
 
@@ -272,9 +301,21 @@
         if (!staff) return;
         Object.keys(savedShifts).forEach(key => { if (key.endsWith(`_${id}`) && savedShifts[key] !== '假') savedShifts[key] = staff.mainShift; });
         renderBothCalendars();
+        saveDataToStorage();
     }
 
-    // 2. 月曆網格生成大腦
+    // 清空重排功能
+    function clearAllSchedules() {
+        if (confirm("確定要【清空所有排班資料】重排嗎？這會清除手動調整的記憶，回歸初始名單。")) {
+            localStorage.removeItem('nurse_staff_list');
+            localStorage.removeItem('nurse_saved_shifts');
+            loadSavedData();
+            renderStaffControlPanel();
+            renderBothCalendars();
+        }
+    }
+
+    // 月曆網格生成大腦
     function buildCalendarGrid(containerId, year, month, leaveInputPrefix) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
@@ -302,8 +343,8 @@
 
             let dayNumberDiv = document.createElement('div');
             dayNumberDiv.className = 'day-number';
-            let firstDayBadge = (day === 1) ? `<span class="first-day-tip">發動機</span>` : '';
-            dayNumberDiv.innerHTML = `<span>${day} 日 ${firstDayBadge}</span><span style="font-size:11px; color:#7f8c8d;">(週${weekDayChinese})</span>`;
+            // 💡 已拔除 (發動機) 藍色提示文字
+            dayNumberDiv.innerHTML = `<span>${day} 日</span><span style="font-size:11px; color:#7f8c8d;">(週${weekDayChinese})</span>`;
             cell.appendChild(dayNumberDiv);
 
             staffList.forEach(staff => {
@@ -343,8 +384,9 @@
                     select.onchange = function() {
                         savedShifts[cacheKey] = this.value;
                         this.className = (this.value === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
-                        if (day === 1) autoFillPureMainShift(staff.id, this.value, year, month, totalDays, leaveDatesArr);
+                        // 💡 已將原有的 autoFillPureMainShift 函式移除，確保 1 號完全不會影響後面。
                         calculateAllMetrics(); 
+                        saveDataToStorage(); 
                     };
                 }
 
@@ -367,20 +409,7 @@
         calculateAllMetrics();
     }
 
-    function autoFillPureMainShift(staffId, startValue, year, month, totalDays, leaveDatesArr) {
-        for (let d = 2; d <= totalDays; d++) {
-            if (leaveDatesArr.includes(d)) continue;
-            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            savedShifts[`${dateStr}_${staffId}`] = startValue;
-            let targetSelect = document.getElementById(`select_${year}_${month}_${d}_${staffId}`);
-            if (targetSelect) {
-                targetSelect.value = startValue;
-                targetSelect.className = (startValue === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
-            }
-        }
-    }
-
-    // 智慧假期分配與連六切斷引擎
+    // 智慧假期配發與連六排除
     function autoDistributeExcessLeavesWithSafety() {
         let months = [
             {y: curYear, m: curMonth, max: new Date(curYear, curMonth, 0).getDate()},
@@ -445,7 +474,7 @@
             }
         });
 
-        // 智慧修正連六
+        // 排除連六
         months.forEach(mObj => {
             for (let day = 1; day <= mObj.max; day++) {
                 staffList.forEach(s => {
@@ -487,7 +516,8 @@
         });
 
         calculateAllMetrics();
-        alert("🛡️ 排班引擎：假期配發成功！系統已主動介入、於平日提前分假排除連續上班六天違規！");
+        saveDataToStorage(); 
+        alert("🛡️ 排班引擎：假期配發完畢！且資料已成功寫入網頁安全儲存區！");
     }
 
     // 計算整合大腦
@@ -566,7 +596,7 @@
             }
         });
 
-        // 刷新上方主控台數據
+        // 刷新數據
         staffList.forEach(s => {
             let lBadge = document.getElementById(`leave_badge_${s.id}`);
             if (lBadge) {
@@ -582,12 +612,17 @@
         });
     }
 
+    document.getElementById('current-month-label').innerText = `當月 (${curYear}年 ${curMonth}月) [應休：${curMonthTargetLeaves}天]`;
+    document.getElementById('next-month-label').innerText = `下個月 (${nxtYear}年 ${nxtMonth}月) [應休：${nxtMonthTargetLeaves}天]`;
+
     function exportToPDF() { window.print(); }
 
-    window.onload = function() { 
+    // 初始化入口
+    document.addEventListener("DOMContentLoaded", function() {
+        loadSavedData();
         renderStaffControlPanel(); 
         renderBothCalendars(); 
-    };
+    });
 </script>
 
 </body>
