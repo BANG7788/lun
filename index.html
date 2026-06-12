@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫護三班制智慧排班系統 - 完美人員名單版</title>
+    <style>
+        /* 全域基礎優化 */
+        * { box-sizing: border-box; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f1f2f6; margin: 0; padding: 10px; color: #2c3e50; }
+        .container { max-width: 1450px; margin: 0 auto; }
+        h1 { text-align: center; margin: 10px 0 5px 0; color: #2f3542; font-size: 22px; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 20px; font-size: 13px; padding: 0 10px; }
+        
+        .section-box { background: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .section-title-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; border-left: 5px solid #2ed573; padding-left: 10px; }
+        .section-title { font-size: 16px; font-weight: bold; color: #2f3542; }
+        
+        /* 按鈕控制區 */
+        .btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+        .smart-btn { background: linear-gradient(135deg, #2ed573, #1abc9c); color: white; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(46,213,115,0.2); text-align: center; transition: transform 0.1s; display: inline-block; }
+        .smart-btn:active { transform: scale(0.98); }
+        .pdf-btn { background: linear-gradient(135deg, #ff4757, #ff6b81); box-shadow: 0 4px 6px rgba(255,71,87,0.2); }
+        .add-btn { background: linear-gradient(135deg, #1e90ff, #3742fa); box-shadow: 0 4px 6px rgba(30,144,255,0.2); margin-top: 10px; width: auto; }
+        .del-btn { background: #ff4757; color: white; border: none; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .del-btn:hover { background: #ff1f30; }
+
+        /* 控制台表格 */
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .staff-table { width: 100%; border-collapse: collapse; text-align: center; min-width: 800px; }
+        .staff-table th, .staff-table td { border: 1px solid #ced4da; padding: 8px 5px; font-size: 12px; }
+        .staff-table th { background: #2f3542; color: white; }
+        
+        .name-input { width: 80px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+        .leave-input { width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #e74c3c; font-weight: bold; font-size: 11px; }
+        
+        .hours-badge { font-weight: bold; font-size: 11px; padding: 4px 6px; border-radius: 4px; display: inline-block; }
+        .hours-normal { background: #2ed573; color: white; }
+        .hours-over { background: #ff4757; color: white; }
+        
+        .leave-badge { font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 4px; display: inline-block; color: white; }
+        .leave-ok { background: #2ed573; }
+        .leave-warn { background: #ffa502; }
+        
+        .main-shift-select { padding: 4px; font-weight: bold; border-radius: 4px; border: 1px solid #ccc; width: 95px; text-align: center; }
+
+        /* 月曆區塊 */
+        .calendar-box { background: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .calendar-month-title { font-size: 18px; font-weight: bold; text-align: left; margin-bottom: 15px; color: #1e90ff; border-bottom: 2px solid #1e90ff; padding-bottom: 5px; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .calendar-day-label { background: #57606f; color: white; text-align: center; padding: 8px; font-weight: bold; border-radius: 4px; font-size: 12px; }
+        .calendar-day-label.weekend { background: #ffa502; }
+        
+        .day-cell { background: #ffffff; border: 1px solid #ced4da; border-radius: 6px; padding: 6px; min-height: 175px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .day-cell.other-month { display: none; } 
+        .day-cell.is-weekend { background: #fffdf0; border-color: #ffa502; }
+        .day-cell.first-day { border: 2px solid #1e90ff; background-color: #f0f7ff; }
+        .day-number { font-size: 14px; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .first-day-tip { font-size: 9px; color: #1e90ff; background: #e0f0ff; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+        
+        .day-staff-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; border-bottom: 1px dashed #f1f2f6; padding-bottom: 2px; }
+        .day-staff-name { font-weight: bold; width: 50px; overflow: hidden; text-overflow: ellipsis; }
+        
+        .cal-select { font-size: 12px; padding: 3px; border-radius: 4px; border: 1px solid #ccc; width: 70px; font-weight: bold; text-align: center; height: 26px; }
+        .val-OFF { background: #ffffff; color: #333; }
+        .val-假 { background: #ff4757; color: white; }
+        
+        .day-check-bar { font-size: 11px; font-weight: bold; padding: 4px; text-align: center; border-radius: 3px; margin-top: 5px; line-height: 1.3; }
+        .check-ok { background: #2ed573; color: white; }
+        .check-fail { background: #ff4757; color: white; }
+
+        /* 手機板佈局 */
+        @media (max-width: 768px) {
+            body { padding: 5px; }
+            h1 { font-size: 18px; }
+            .section-title-container { flex-direction: column; align-items: flex-start; }
+            .calendar-weekday-header { display: none !important; }
+            .calendar-grid { grid-template-columns: 1fr; gap: 12px; }
+            .day-cell { min-height: auto; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+            .day-number { font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 6px; margin-bottom: 10px; }
+            .day-staff-row { padding: 6px 0; font-size: 14px; }
+            .day-staff-name { width: 70px; font-size: 14px; }
+            .cal-select { width: 90px; font-size: 13px; height: 32px; }
+            .smart-btn { padding: 12px; font-size: 14px; }
+            .section-box { padding: 10px; }
+        }
+        
+        @media (min-width: 769px) {
+            .section-title-container { flex-direction: row; justify-content: space-between; align-items: center; }
+            .btn-group { flex-direction: row; width: auto; }
+            .smart-btn { width: auto; padding: 8px 18px; }
+        }
+
+        /* PDF 列印優化 */
+        @media print {
+            body { background-color: #ffffff; padding: 0; margin: 0; color: #000000; }
+            .smart-btn, .btn-group, .section-box, .add-btn, .del-btn { display: none !important; }
+            h1 { font-size: 24px; margin-top: 0; }
+            .calendar-box { box-shadow: none; padding: 0; margin-bottom: 40px; page-break-inside: avoid; }
+            .calendar-month-title { font-size: 20px; border-bottom: 3px solid #000; color: #000000; }
+            .calendar-weekday-header { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 5px !important; }
+            .calendar-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 5px !important; }
+            .calendar-day-label { background: #444444 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .calendar-day-label.weekend { background: #888888 !important; }
+            .day-cell { border: 1px solid #000000 !important; min-height: 140px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; background: #ffffff !important; page-break-inside: avoid !important; }
+            .day-cell.is-weekend { background: #f9f9f9 !important; }
+            .cal-select { border: none !important; appearance: none; -webkit-appearance: none; background: transparent !important; color: #000000 !important; font-size: 12px !important; width: auto !important; height: auto !important; text-align: right !important; padding: 0 !important; }
+            .val-假 { color: #ff0000 !important; font-weight: bold !important; }
+            .day-staff-row { border-bottom: 1px solid #dddddd !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
+            .day-check-bar { border: 1px solid #444 !important; font-size: 10px !important; padding: 2px !important; }
+            .check-ok { background: #ddffdd !important; color: #006600 !important; }
+            .check-fail { background: #ffdddd !important; color: #cc0000 !important; font-weight: bold !important; }
+            @page { size: A4 landscape; margin: 10mm; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>醫護/三班制智慧排班系統</h1>
+    <div class="subtitle">【全新人名更新版：內建動態增刪、手機優化、一鍵智慧平分假期與 A4 橫式 PDF 輸出】</div>
+
+    <div class="section-box">
+        <div class="section-title-container">
+            <div class="section-title">上區塊：人員預設主班別與休假預約控制台</div>
+            <div class="btn-group">
+                <button class="smart-btn" onclick="autoDistributeExcessLeavesWithSafety()">✨ 一鍵平均分假 (系統自動修正違規)</button>
+                <button class="smart-btn pdf-btn" onclick="exportToPDF()">🖨️ 輸出成標準 PDF 班表</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="staff-table">
+                <thead>
+                    <tr>
+                        <th width="5%">編號</th>
+                        <th width="12%">員工姓名</th>
+                        <th width="12%">預設主班</th>
+                        <th width="35%">預約放假日期 (半形逗號隔開，如: 5,12)</th>
+                        <th width="14%">累積放假天數 / 應休</th>
+                        <th width="14%">雙月總工時 / 週均</th>
+                        <th width="8%">功能</th>
+                    </tr>
+                </thead>
+                <tbody id="staff-setting-body"></tbody>
+            </table>
+        </div>
+        <button class="smart-btn add-btn" onclick="addNewStaff()">➕ 新增排班人員</button>
+    </div>
+
+    <div class="calendar-box">
+        <div class="calendar-month-title" id="current-month-label">當月</div>
+        <div class="calendar-grid calendar-weekday-header" style="margin-bottom: 10px;">
+            <div class="calendar-day-label">一</div><div class="calendar-day-label">二</div><div class="calendar-day-label">三</div>
+            <div class="calendar-day-label">四</div><div class="calendar-day-label">五</div><div class="calendar-day-label weekend">六</div>
+            <div class="calendar-day-label weekend">日</div>
+        </div>
+        <div class="calendar-grid" id="current-calendar-cells"></div>
+    </div>
+
+    <div class="calendar-box">
+        <div class="calendar-month-title" id="next-month-label">下個月</div>
+        <div class="calendar-grid calendar-weekday-header" style="margin-bottom: 10px;">
+            <div class="calendar-day-label">一</div><div class="calendar-day-label">二</div><div class="calendar-day-label">三</div>
+            <div class="calendar-day-label">四</div><div class="calendar-day-label">五</div><div class="calendar-day-label weekend">六</div>
+            <div class="calendar-day-label weekend">日</div>
+        </div>
+        <div class="calendar-grid" id="next-calendar-cells"></div>
+    </div>
+</div>
+
+<script>
+    // 更新為您提供的新名單
+    let staffList = [
+        { id: Date.now()+0, name: "桂玲", mainShift: "BC", leaveCur: "5,12", leaveNxt: "6,13" },
+        { id: Date.now()+1, name: "于鈞", mainShift: "BC", leaveCur: "4,11", leaveNxt: "5,12" },
+        { id: Date.now()+2, name: "宛倫", mainShift: "BC", leaveCur: "1,2", leaveNxt: "2,3" },
+        { id: Date.now()+3, name: "宜庭", mainShift: "JB", leaveCur: "6,13", leaveNxt: "7,14" },
+        { id: Date.now()+4, name: "季苓", mainShift: "JB", leaveCur: "3,10", leaveNxt: "4,11" },
+        { id: Date.now()+5, name: "詠湉", mainShift: "RA", leaveCur: "14,15", leaveNxt: "1,2" }
+    ];
+    
+    const mainShiftOptions = ["BC", "JB", "RA"];
+    const shiftPermissions = {
+        'BC': ['BC', 'JB', 'BC+2', 'BC+4', 'DB', 'OFF', '假'],
+        'JB': ['BC', 'JB', 'RA', 'OFF', '假'],
+        'RA': ['JB', 'RA', 'RA+4', 'OFF', '假']
+    };
+    const shiftHours = { 'OFF': 0, '假': 0, 'BC': 8, 'JB': 8, 'RA': 8, 'BC+2': 10, 'BC+4': 12, 'DB': 8, 'RA+4': 12 };
+    const nationalHolidays = ["2026-06-19"]; 
+
+    let savedShifts = {}; 
+
+    const now = new Date(2026, 5, 1); 
+    const curYear = now.getFullYear(); const curMonth = now.getMonth() + 1; 
+    const nextMonthObj = new Date(curYear, curMonth, 1);
+    const nxtYear = nextMonthObj.getFullYear(); const nxtMonth = nextMonthObj.getMonth() + 1; 
+
+    function countTargetRequiredLeaves(year, month) {
+        let totalDays = new Date(year, month, 0).getDate();
+        let targetCount = 0;
+        for (let d = 1; d <= totalDays; d++) {
+            let dayObj = new Date(year, month - 1, d);
+            if (dayObj.getDay() === 0 || dayObj.getDay() === 6 || nationalHolidays.includes(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)) targetCount++;
+        }
+        return targetCount;
+    }
+    const curMonthTargetLeaves = countTargetRequiredLeaves(curYear, curMonth);
+    const nxtMonthTargetLeaves = countTargetRequiredLeaves(nxtYear, nxtMonth);
+    const totalTargetRequired = curMonthTargetLeaves + nxtMonthTargetLeaves;
+
+    // 1. 核心渲染：渲染主控台人員列表
+    function renderStaffControlPanel() {
+        const tbody = document.getElementById('staff-setting-body');
+        tbody.innerHTML = '';
+        
+        staffList.forEach((staff, index) => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td><input type="text" class="name-input" id="name_${staff.id}" value="${staff.name}" oninput="syncStaffData(${staff.id})"></td>
+                <td><select id="main_shift_${staff.id}" class="main-shift-select" onchange="syncStaffData(${staff.id}); handleMainShiftChange(${staff.id});"></select></td>
+                <td>
+                    <span style="font-size:11px;color:#1e90ff;">當月:</span><input type="text" style="width:32%;" class="leave-input" id="leave_cur_${staff.id}" value="${staff.leaveCur}" oninput="syncStaffData(${staff.id}); renderBothCalendars();">
+                    <span style="font-size:11px;color:#ffa502;margin-left:3px;">下月:</span><input type="text" style="width:32%;" class="leave-input" id="leave_nxt_${staff.id}" value="${staff.leaveNxt}" oninput="syncStaffData(${staff.id}); renderBothCalendars();">
+                </td>
+                <td><span id="leave_badge_${staff.id}" class="leave-badge leave-ok">0 / ${totalTargetRequired}</span></td>
+                <td><span id="hours_badge_${staff.id}" class="hours-badge hours-normal">0 H</span></td>
+                <td><button class="del-btn" onclick="deleteStaff(${staff.id})">❌ 刪除</button></td>
+            `;
+            tbody.appendChild(tr);
+
+            const s = document.getElementById(`main_shift_${staff.id}`);
+            mainShiftOptions.forEach(k => { s.options.add(new Option(k, k)); });
+            s.value = staff.mainShift;
+        });
+    }
+
+    function syncStaffData(id) {
+        let staff = staffList.find(s => s.id === id);
+        if (staff) {
+            staff.name = document.getElementById(`name_${id}`).value;
+            staff.mainShift = document.getElementById(`main_shift_${id}`).value;
+            staff.leaveCur = document.getElementById(`leave_cur_${id}`).value;
+            staff.leaveNxt = document.getElementById(`leave_nxt_${id}`).value;
+        }
+        document.querySelectorAll(`.name-lbl-${id}`).forEach(el => el.innerText = staff.name);
+    }
+
+    function addNewStaff() {
+        let newId = Date.now();
+        staffList.push({ id: newId, name: "新同仁", mainShift: "BC", leaveCur: "", leaveNxt: "" });
+        renderStaffControlPanel();
+        renderBothCalendars();
+    }
+
+    function deleteStaff(id) {
+        if (staffList.length <= 1) {
+            alert("⚠️ 系統警告：至少需要保留 1 位同仁才可以進行排班！");
+            return;
+        }
+        if (confirm("確定要刪除這位人員嗎？此操作會一併移除他在此雙月的所有的班表記錄。")) {
+            Object.keys(savedShifts).forEach(key => { if (key.endsWith(`_${id}`)) delete savedShifts[key]; });
+            staffList = staffList.filter(s => s.id !== id);
+            renderStaffControlPanel();
+            renderBothCalendars();
+        }
+    }
+
+    function handleMainShiftChange(id) {
+        let staff = staffList.find(s => s.id === id);
+        if (!staff) return;
+        Object.keys(savedShifts).forEach(key => { if (key.endsWith(`_${id}`) && savedShifts[key] !== '假') savedShifts[key] = staff.mainShift; });
+        renderBothCalendars();
+    }
+
+    // 2. 月曆網格生成大腦
+    function buildCalendarGrid(containerId, year, month, leaveInputPrefix) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        const firstDayInstance = new Date(year, month - 1, 1);
+        let startGridIndex = firstDayInstance.getDay() === 0 ? 6 : firstDayInstance.getDay() - 1;
+        const totalDays = new Date(year, month, 0).getDate();
+
+        for (let i = 0; i < startGridIndex; i++) {
+            let emptyCell = document.createElement('div');
+            emptyCell.className = 'day-cell other-month';
+            container.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const isWeekend = (new Date(year, month-1, day).getDay() === 0 || new Date(year, month-1, day).getDay() === 6 || nationalHolidays.includes(dateStr));
+            const weekDayChinese = ["日", "一", "二", "三", "四", "五", "六"][new Date(year, month-1, day).getDay()];
+
+            let cell = document.createElement('div');
+            cell.className = 'day-cell' + (isWeekend ? ' is-weekend' : '') + (day === 1 ? ' first-day' : '');
+            cell.id = `cell_${year}_${month}_${day}`;
+            cell.setAttribute('data-weekday', weekDayChinese);
+            cell.setAttribute('data-is-holiday', isWeekend ? "true" : "false");
+
+            let dayNumberDiv = document.createElement('div');
+            dayNumberDiv.className = 'day-number';
+            let firstDayBadge = (day === 1) ? `<span class="first-day-tip">發動機</span>` : '';
+            dayNumberDiv.innerHTML = `<span>${day} 日 ${firstDayBadge}</span><span style="font-size:11px; color:#7f8c8d;">(週${weekDayChinese})</span>`;
+            cell.appendChild(dayNumberDiv);
+
+            staffList.forEach(staff => {
+                let row = document.createElement('div');
+                row.className = 'day-staff-row';
+                
+                let nameSpan = document.createElement('span');
+                nameSpan.className = `day-staff-name name-lbl-${staff.id}`;
+                nameSpan.innerText = staff.name;
+                row.appendChild(nameSpan);
+
+                let select = document.createElement('select');
+                select.id = `select_${year}_${month}_${day}_${staff.id}`;
+                select.className = 'cal-select';
+
+                let allowedShifts = shiftPermissions[staff.mainShift] || ['OFF', '假'];
+                allowedShifts.forEach(k => { select.options.add(new Option(k, k)); });
+
+                let cacheKey = `${dateStr}_${staff.id}`;
+                let leaveDatesArr = staff[leaveInputPrefix].split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                let isPrebookedLeave = leaveDatesArr.includes(day);
+
+                if (isPrebookedLeave) {
+                    select.value = '假'; select.disabled = true; select.className = 'cal-select val-假';
+                    savedShifts[cacheKey] = '假';
+                } else {
+                    select.disabled = false;
+                    if (savedShifts[cacheKey] === '假') savedShifts[cacheKey] = staff.mainShift;
+                    
+                    let targetVal = savedShifts[cacheKey] || staff.mainShift;
+                    if (!allowedShifts.includes(targetVal)) targetVal = staff.mainShift;
+                    
+                    select.value = targetVal;
+                    savedShifts[cacheKey] = targetVal;
+                    select.className = (select.value === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
+
+                    select.onchange = function() {
+                        savedShifts[cacheKey] = this.value;
+                        this.className = (this.value === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
+                        if (day === 1) autoFillPureMainShift(staff.id, this.value, year, month, totalDays, leaveDatesArr);
+                        calculateAllMetrics(); 
+                    };
+                }
+
+                row.appendChild(select);
+                cell.appendChild(row);
+            });
+
+            let checkBar = document.createElement('div');
+            checkBar.className = 'day-check-bar';
+            checkBar.id = `check_bar_${year}_${month}_${day}`;
+            cell.appendChild(checkBar);
+
+            container.appendChild(cell);
+        }
+    }
+
+    function renderBothCalendars() {
+        buildCalendarGrid('current-calendar-cells', curYear, curMonth, 'leaveCur');
+        buildCalendarGrid('next-calendar-cells', nxtYear, nxtMonth, 'leaveNxt');
+        calculateAllMetrics();
+    }
+
+    function autoFillPureMainShift(staffId, startValue, year, month, totalDays, leaveDatesArr) {
+        for (let d = 2; d <= totalDays; d++) {
+            if (leaveDatesArr.includes(d)) continue;
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            savedShifts[`${dateStr}_${staffId}`] = startValue;
+            let targetSelect = document.getElementById(`select_${year}_${month}_${d}_${staffId}`);
+            if (targetSelect) {
+                targetSelect.value = startValue;
+                targetSelect.className = (startValue === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
+            }
+        }
+    }
+
+    // 智慧假期分配與連六切斷引擎
+    function autoDistributeExcessLeavesWithSafety() {
+        let months = [
+            {y: curYear, m: curMonth, max: new Date(curYear, curMonth, 0).getDate()},
+            {y: nxtYear, m: nxtMonth, max: new Date(nxtYear, nxtMonth, 0).getDate()}
+        ];
+
+        function isWorkingInCache(y, m, d, id) {
+            if (d < 1) return false;
+            if (d > new Date(y, m, 0).getDate()) return false;
+            let val = savedShifts[`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}_${id}`];
+            return (val && val !== '假' && val !== 'OFF');
+        }
+
+        function checkConsecutiveAt(y, m, d, id) {
+            let maxRun = 0; let currentRun = 0;
+            for (let checkDay = d - 6; checkDay <= d + 6; checkDay++) {
+                if (isWorkingInCache(y, m, checkDay, id)) { currentRun++; if (currentRun > maxRun) maxRun = currentRun; }
+                else currentRun = 0;
+            }
+            return maxRun;
+        }
+
+        months.forEach(mObj => {
+            for (let day = 1; day <= mObj.max; day++) {
+                let cell = document.getElementById(`cell_${mObj.y}_${mObj.m}_${day}`);
+                if (!cell) continue;
+                if (cell.getAttribute('data-is-holiday') !== "true") {
+                    let keepChecking = true;
+                    while (keepChecking) {
+                        let counts = { 'BC': 0, 'JB': 0, 'RA': 0, 'BC+2': 0, 'BC+4': 0, 'DB': 0, 'RA+4': 0, '假': 0, 'OFF': 0 };
+                        staffList.forEach(s => {
+                            let val = savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(day).padStart(2,'0')}_${s.id}`] || 'OFF';
+                            if (counts.hasOwnProperty(val)) counts[val]++;
+                        });
+
+                        if ((counts['假'] + counts['OFF']) >= 2) { keepChecking = false; break; }
+
+                        let excessShift = null;
+                        if (counts['BC'] > 2) excessShift = 'BC';
+                        else if (counts['JB'] > 2) excessShift = 'JB';
+                        else if (counts['RA'] > 1) excessShift = 'RA';
+
+                        if (!excessShift) { keepChecking = false; break; }
+
+                        let candidateId = -1; let minLeaves = 999;
+                        let currentLeaveCounts = {}; staffList.forEach(s => currentLeaveCounts[s.id] = 0);
+                        Object.keys(savedShifts).forEach(k => { if (savedShifts[k] === '假') { let sid = k.split('_')[1]; if(currentLeaveCounts[sid]!==undefined) currentLeaveCounts[sid]++; } });
+
+                        staffList.forEach(s => {
+                            let val = savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(day).padStart(2,'0')}_${s.id}`] || 'OFF';
+                            if (val === excessShift) {
+                                let isPrebooked = document.getElementById(`select_${mObj.y}_${mObj.m}_${day}_${s.id}`).disabled;
+                                if (!isPrebooked && currentLeaveCounts[s.id] < minLeaves) { minLeaves = currentLeaveCounts[s.id]; candidateId = s.id; }
+                            }
+                        });
+
+                        if (candidateId !== -1) {
+                            savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(day).padStart(2,'0')}_${candidateId}`] = '假';
+                        } else { keepChecking = false; }
+                    }
+                }
+            }
+        });
+
+        // 智慧修正連六
+        months.forEach(mObj => {
+            for (let day = 1; day <= mObj.max; day++) {
+                staffList.forEach(s => {
+                    if (isWorkingInCache(mObj.y, mObj.m, day, s.id)) {
+                        if (checkConsecutiveAt(mObj.y, mObj.m, day, s.id) >= 6) {
+                            for (let fixDay = day; fixDay >= day - 5; fixDay--) {
+                                if (fixDay < 1) continue;
+                                let fixCell = document.getElementById(`cell_${mObj.y}_${mObj.m}_${fixDay}`);
+                                if (!fixCell || fixCell.getAttribute('data-is-holiday') === "true") continue;
+                                if (document.getElementById(`select_${mObj.y}_${mObj.m}_${fixDay}_${s.id}`).disabled) continue;
+                                
+                                let dailyOffs = 0;
+                                staffList.forEach(st => {
+                                    let v = savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(fixDay).padStart(2,'0')}_${st.id}`];
+                                    if(v === '假' || v === 'OFF') dailyOffs++;
+                                });
+
+                                if (dailyOffs < 2) {
+                                    savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(fixDay).padStart(2,'0')}_${s.id}`] = '假';
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        months.forEach(mObj => {
+            for (let day = 1; day <= mObj.max; day++) {
+                staffList.forEach(s => {
+                    let ts = document.getElementById(`select_${mObj.y}_${mObj.m}_${day}_${s.id}`);
+                    if (ts && !ts.disabled) {
+                        let cv = savedShifts[`${mObj.y}-${String(mObj.m).padStart(2,'0')}-${String(day).padStart(2,'0')}_${s.id}`] || 'OFF';
+                        ts.value = cv; ts.className = (cv === '假') ? 'cal-select val-假' : 'cal-select val-OFF';
+                    }
+                });
+            }
+        });
+
+        calculateAllMetrics();
+        alert("🛡️ 排班引擎：假期配發成功！系統已主動介入、於平日提前分假排除連續上班六天違規！");
+    }
+
+    // 計算整合大腦
+    function calculateAllMetrics() {
+        let staffHours = {}; let staffLeaveDays = {};
+        staffList.forEach(s => { staffHours[s.id] = 0; staffLeaveDays[s.id] = 0; });
+        
+        let monthsToCalc = [
+            {y: curYear, m: curMonth, max: new Date(curYear, curMonth, 0).getDate()}, 
+            {y: nxtYear, m: nxtMonth, max: new Date(nxtYear, nxtMonth, 0).getDate()}
+        ];
+
+        function getConsecutiveWorkDays(y, m, d, id) {
+            let count = 0; let checkD = d; let checkM = m; let checkY = y;
+            while (true) {
+                let v = savedShifts[`${checkY}-${String(checkM).padStart(2,'0')}-${String(checkD).padStart(2,'0')}_${id}`];
+                if (v && v !== '假' && v !== 'OFF') { count++; checkD--; if (checkD < 1) { checkM--; if (checkM < 1) { checkM = 12; checkY--; } checkD = new Date(checkY, checkM, 0).getDate(); } } 
+                else break;
+            }
+            return count;
+        }
+
+        monthsToCalc.forEach(mObj => {
+            for (let day = 1; day <= mObj.max; day++) {
+                let cell = document.getElementById('cell_' + mObj.y + '_' + mObj.m + '_' + day);
+                if (!cell) continue;
+
+                let weekDayChinese = cell.getAttribute('data-weekday');
+                let isHoliday = cell.getAttribute('data-is-holiday') === "true"; 
+                
+                let counts = { 'BC': 0, 'JB': 0, 'RA': 0, 'BC+2': 0, 'BC+4': 0, 'DB': 0, 'RA+4': 0, '假': 0, 'OFF': 0 };
+                let violateSixNames = []; 
+
+                staffList.forEach(s => {
+                    let select = document.getElementById(`select_${mObj.y}_${mObj.m}_${day}_${s.id}`);
+                    if (select) {
+                        let val = select.value;
+                        if(staffHours[s.id] !== undefined) staffHours[s.id] += shiftHours[val] || 0;
+                        if (val === '假' && staffLeaveDays[s.id] !== undefined) staffLeaveDays[s.id]++;
+                        if (counts.hasOwnProperty(val)) counts[val]++;
+
+                        if (val !== '假' && val !== 'OFF') {
+                            if (getConsecutiveWorkDays(mObj.y, mObj.m, day, s.id) >= 6) violateSixNames.push(s.name);
+                        }
+                    }
+                });
+
+                let totalOffDuty = counts['假'] + counts['OFF'];
+                let isComply = false; let customErrorMsg = "";
+
+                if (violateSixNames.length > 0) {
+                    isComply = false; customErrorMsg = `▲ 違規: ${violateSixNames.join(',')}連上6天`;
+                } else if (totalOffDuty >= 3) {
+                    isComply = false; customErrorMsg = "▲ 不可3人同休";
+                } else {
+                    if (weekDayChinese === "六" || (isHoliday && weekDayChinese !== "日")) {
+                        if (counts['BC'] === 2 && counts['JB'] === 1 && counts['BC+2'] === 1 && counts['RA'] === 1) isComply = true;
+                    } 
+                    else if (weekDayChinese === "日") {
+                        let sunNormal = (counts['BC'] === 1 && counts['DB'] === 1 && counts['JB'] === 1 && counts['RA'] === 1);
+                        let sunEmergency = (totalOffDuty === 2 && counts['BC+4'] === 1 && counts['DB'] === 1 && counts['RA+4'] === 1);
+                        if (sunNormal || sunEmergency) isComply = true;
+                    } 
+                    else {
+                        let normalWeekday = (counts['BC'] === 2 && counts['JB'] === 2 && counts['RA'] === 1);
+                        let emergencyWeekday = (totalOffDuty === 2 && counts['BC'] === 1 && counts['BC+4'] === 1 && counts['JB'] === 1 && counts['RA'] === 1 && counts['RA+4'] === 1);
+                        if (normalWeekday || emergencyWeekday) isComply = true;
+                    }
+                }
+
+                let checkBar = document.getElementById(`check_bar_${mObj.y}_${mObj.m}_${day}`);
+                if (checkBar) {
+                    if (isComply) { checkBar.className = "day-check-bar check-ok"; checkBar.innerText = "● 人力達標"; } 
+                    else { checkBar.className = "day-check-bar check-fail"; checkBar.innerText = customErrorMsg ? customErrorMsg : "▲ 人力不符"; }
+                }
+            }
+        });
+
+        // 刷新上方主控台數據
+        staffList.forEach(s => {
+            let lBadge = document.getElementById(`leave_badge_${s.id}`);
+            if (lBadge) {
+                lBadge.innerText = `${staffLeaveDays[s.id]} / ${totalTargetRequired}`;
+                lBadge.className = (staffLeaveDays[s.id] === totalTargetRequired) ? "leave-badge leave-ok" : "leave-badge leave-warn";
+            }
+            let hBadge = document.getElementById(`hours_badge_${s.id}`);
+            if (hBadge) {
+                let th = staffHours[s.id] || 0; let aw = Math.round((th / 8.86) * 10) / 10;
+                hBadge.innerText = `${th} H (週均 ${aw})`;
+                hBadge.className = (aw > 52) ? "hours-badge hours-over" : "hours-badge hours-normal";
+            }
+        });
+    }
+
+    function exportToPDF() { window.print(); }
+
+    window.onload = function() { 
+        renderStaffControlPanel(); 
+        renderBothCalendars(); 
+    };
+</script>
+
+</body>
+</html>
